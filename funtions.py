@@ -7,25 +7,20 @@ import os
 import pickle
 
 def coordenates(folder_path):
-    fecha = []
-    wheat_type = []
-    n_plant = []
+    lstind = []
+    lstmc = []
     lstx = []
     lsty = []
     lstz = []
     lsti = []
-    nlst=[]
     for file in glob.glob(folder_path):
-        n=file.split("_")[-1].split(".ply")[0]
-        np = file.split("_")[-3]
-        tw = file.split("/")[-3]
-        fc=file.split("/")[-4]
+        ind = file.split("/")[-1].split("id")[0]
+        np = file.split("/")[-1].split("_")[-2]
         with open(file) as f:
             lines = f.readlines()
             for line in lines[11:]:
-                fecha.append(fc)
-                wheat_type.append(tw)
-                n_plant.append(np)
+                lstmc.append(np)
+                lstind.append(str(ind))
                 x = line.split(" ")[0]
                 lstx.append(float(x))
                 y = line.split(" ")[1]
@@ -34,11 +29,8 @@ def coordenates(folder_path):
                 lstz.append(float(z))
                 i = line.split(" ")[3]
                 lsti.append(int(i))
-                nlst.append(str(n))
-
-
-    df = pd.DataFrame(list(zip(nlst,fecha, wheat_type, n_plant, lstx, lsty, lstz, lsti)),
-                      columns=['id','fecha', 'wheat_type', 'n_plant', 'Px', 'Py', 'Pz', 'intensity'])
+    df = pd.DataFrame(list(zip(lstind, lstmc, lstx, lsty, lstz, lsti)),
+                      columns=['id', 'maceta', 'Px', 'Py', 'Pz', 'intensity'])
 
     return df
 
@@ -92,7 +84,7 @@ def height_point_clouds(folder_path, df, pp):
     return df_heights
 
 
-def point_cloud_volume(df_1, pp, pv):
+def point_cloud_volume(df_1, pv,ph):
     """
     Parameters
     ----------
@@ -110,32 +102,30 @@ def point_cloud_volume(df_1, pp, pv):
 
     """
 
-    df_v = clipsoil(df_1, pp)  # Corte del plano
-
-    minvalue_Py = df_v.Py.min()  #
-    minvalue_Px = df_v.Px.min()  #
-    maxvalue_Py = df_v.Py.max()
-    maxvalue_Px = df_v.Px.max()
+    minvalue_Py = df_1.Py.min()  #
+    minvalue_Px = df_1.Px.min()  #
+    maxvalue_Py = df_1.Py.max()
+    maxvalue_Px = df_1.Px.max()
     ran_Py = (maxvalue_Py - minvalue_Py)
     ran_Px = (maxvalue_Px - minvalue_Px)
 
     pymax = maxvalue_Py - (ran_Py * pv / 100)
     pymin = minvalue_Py + (ran_Py * pv / 100)
 
-    pxmax = maxvalue_Px - (ran_Px * pv / 100)
     pxmin = minvalue_Px + (ran_Px * pv / 100)
+    pxmax = maxvalue_Px - (ran_Px * pv / 100)
 
-    df_pymax = df_v.loc[(df_v.Py > pymax)]
-    df_pxmax = df_v.loc[(df_v.Px > pxmax)]
+    df_pymax = df_1.loc[(df_1.Py > pymax)]
+    df_pxmax = df_1.loc[(df_1.Px > pxmax)]
 
-    df_pymin = df_v.loc[(df_v.Py < pymin)]
-    df_pxmin = df_v.loc[(df_v.Px < pxmin)]
+    df_pymin = df_1.loc[(df_1.Py < pymin)]
+    df_pxmin = df_1.loc[(df_1.Px < pxmin)]
 
     wigth = df_pymax.Py.mean() - df_pymin.Py.mean()  # Py ancho weigth
 
     depht = df_pxmax.Px.mean() - df_pxmin.Px.mean()  # Px las prof depth
 
-    height = height_point(df_1, pp)  # el alto es considerado como con el suelo
+    height = height_point(df_1, ph)  # el alto es considerado como con el suelo
 
     volume = wigth * depht * height
 
@@ -145,14 +135,16 @@ def point_cloud_volume(df_1, pp, pv):
 
 
 def clipsoil(df_1, pp):
+
     """
     file: archivo ply
     pp:  proporcion que se quita del  (- Pz) desde el Pz.min
 
     """
 
-    minvalue_Pz = df_1.Pz.min()
-    plano_min = minvalue_Pz - (minvalue_Pz * pp / 100)
+
+    rang = df_1.Pz.max() - df_1.Pz.min()
+    plano_min = df_1.Pz.min() + (rang * pp / 100)
     df_clip = df_1.loc[(df_1.Pz > plano_min)]  # puntos cortados
 
     return df_clip
@@ -164,10 +156,10 @@ def height_point(df_1, ph):
     """
     Parameters
     ----------
-    file : TYPE : str
-        DESCRIPTION :file.ply .
+    file : TYPE : dataframe df_1
+        DESCRIPTION : with Px, Py, Pz, intensity
 
-    p : TYPE: int
+    ph : TYPE: int
         DESCRIPTION: proporción de nubes de puntos ocn los cuál se desea calcular la altura
 
     Returns
@@ -176,25 +168,25 @@ def height_point(df_1, ph):
         DESCRIPTION : hieght
     """
 
-    minvalue = df_1.Pz.min()
     maxvalue = df_1.Pz.max()
-    ran = (minvalue - maxvalue) * (-1)
-    pzmaxs = maxvalue - (ran * ph / 100)
+    pzmaxs = maxvalue - (maxvalue * ph * 2 / 100)
     df_pzmaxs = df_1.loc[(df_1.Pz > pzmaxs)]
     height = df_pzmaxs.Pz.mean()
+    print("height id:", df_1.id.unique()[0], height)
 
     return height
 
 
 def density_height_points(df_1, pd):
+    pd=100-pd
     df_clip = clipsoil(df_1, pd)
     npoint = df_clip.shape[0]
-
     return npoint
 
 
-def intensity_heigtht_points(df_1, pp):
-    df_clip = clipsoil(df_1, pp)
+def intensity_heigtht_points(df_1, pi):
+    pi = 100 - pi
+    df_clip = clipsoil(df_1, pi)
     pinti = df_clip.intensity.mean()
 
     return pinti

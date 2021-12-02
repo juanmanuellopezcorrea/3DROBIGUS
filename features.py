@@ -6,13 +6,21 @@ import kmeans_train
 import os
 
 
-def features(ph,pp,pv,folder,path_save):
+def features(ph,pp,pv,folder):
+    """
+
+    :param ph: proporcion de puntos para calcular la altura
+    :param pp:  corte del suelo
+    :param pv:
+    :param folder:
+    :param path_save:
+    :return:
+    """
 
 
     df = funtions.coordenates(folder)  # Data frame con todos los puntos con todas plantas
-    nplant = []
-    fechal = []
-    wheat_typelst = []
+    lstind = []
+    lstmc=[]
     lstheight = []
     lstvolum = []
     lstproy = []
@@ -21,10 +29,7 @@ def features(ph,pp,pv,folder,path_save):
     lstprop_30=[]
     lstprop_40=[]
     lstprop_50=[]
-    lstprop_60=[]
 
-    nlst=[]
-    lstint_60 = []
     lstint_50 = []
     lstint_40 = []
     lstint_30 = []
@@ -33,20 +38,17 @@ def features(ph,pp,pv,folder,path_save):
 
 
     for file in glob.glob(folder):
-        np = file.split("_")[-3]
-        nplant.append(np)
-        n=file.split("_")[-1].split(".ply")[0]
-        nlst.append(str(n))
-        fc=file.split("/")[-4]
-        fechal.append(fc)
-        tw = file.split("/")[-3]
-        wheat_typelst.append(tw)
+        ind = file.split("/")[-1].split("id")[0]
+        lstind.append(ind)
 
-        df_1 = df.loc[(df["id"] == str(n) )]
+        np = file.split("/")[-1].split("_")[-2]
+        lstmc.append(np)
+        df_1 = df.loc[(df["id"] == str(ind) )]
+        df_1=funtions.clipsoil(df_1,pp)
         print(df_1.head())
         height = funtions.height_point(df_1, ph)
         lstheight.append(height)
-        volum = funtions.point_cloud_volume(df_1, pp, pv)
+        volum = funtions.point_cloud_volume(df_1, pv, ph)
         lstvolum.append(volum[3])  #Obtener volumen
         lstproy.append(volum[4])  #Obtener proyección
         # n de puntos
@@ -55,34 +57,29 @@ def features(ph,pp,pv,folder,path_save):
         dp_30 = funtions.density_height_points(df_1, 30)
         dp_40 = funtions.density_height_points(df_1, 40)
         dp_50 = funtions.density_height_points(df_1, 50)
-        dp_60 = funtions.density_height_points(df_1, 60)
         lstprop_10.append(dp_10)
         lstprop_20.append(dp_20)
         lstprop_30.append(dp_30)
         lstprop_40.append(dp_40)
         lstprop_50.append(dp_50)
-        lstprop_60.append(dp_60)
+
 
         # intensity
-        dint_60 = funtions.intensity_heigtht_points(df_1,60)
         dint_50 = funtions.intensity_heigtht_points(df_1,50)
         dint_40 = funtions.intensity_heigtht_points(df_1,40)
         dint_30 = funtions.intensity_heigtht_points(df_1,30)
         dint_20 = funtions.intensity_heigtht_points(df_1,20)
         dint_10 = funtions.intensity_heigtht_points(df_1,10)
-        lstint_60.append(dint_60)
+
         lstint_50.append(dint_50)
         lstint_40.append(dint_40)
         lstint_30.append(dint_30)
         lstint_20.append(dint_20)
-        print(dint_20)
         lstint_10.append(dint_10)
 
-    df_features = pd.DataFrame(list(zip(nplant,
-                                        nlst,
-                                        fechal,
+    df_features = pd.DataFrame(list(zip(lstind,
+                                        lstmc,
                                         lstheight,
-                                        wheat_typelst,
                                         lstvolum,
                                         lstproy,
                                         lstprop_10,
@@ -90,8 +87,6 @@ def features(ph,pp,pv,folder,path_save):
                                         lstprop_30,
                                         lstprop_40,
                                         lstprop_50,
-                                        lstprop_60,
-                                        lstint_60,
                                         lstint_50,
                                         lstint_40,
                                         lstint_30,
@@ -99,11 +94,9 @@ def features(ph,pp,pv,folder,path_save):
                                         lstint_10,)
                                     ),
 
-                                  columns=['nplant',
-                                           'index',
-                                           'fechal',
+                                  columns=['index',
+                                           'maceta',
                                            'lstheight',
-                                           'wheat_typelst',
                                            'lstvolum',
                                            'lstproy',
                                            'lstprop_10',
@@ -111,8 +104,6 @@ def features(ph,pp,pv,folder,path_save):
                                            'lstprop_30',
                                            'lstprop_40',
                                            'lstprop_50',
-                                           'lstprop_60',
-                                           'lstint_60',
                                            'lstint_50',
                                            'lstint_40',
                                            'lstint_30',
@@ -120,15 +111,16 @@ def features(ph,pp,pv,folder,path_save):
                                            'lstint_10',]
                                )
 
-
-    name= os.path.join(path_save,("features_ph_"+ str(ph)+"pv_"+str(pv)+"_pp_"+str(pp)+".csv"))
-    df_features.to_csv(name)
-
-
+    return df_features
+    #name= os.path.join(path_save,("features_ph_"+ str(ph)+"pv_"+str(pv)+"_pp_"+str(pp)+".csv"))
+    #df_features.to_csv(name)
 
 
 
+path_dataset= "/Users/juanmanuel/Documents/datasets/Lidar_3D/dataset_join/*"
 
+
+a=features(10,30,20,path_dataset)
 
 
 
