@@ -4,9 +4,9 @@ import pandas as pd
 import glob as glob
 import kmeans_train
 import os
+import datetime
 
-
-def features(ph,pp,pv,folder):
+def features(ph,pp,pv,folder,path_save):
     """
 
     :param ph: proporcion de puntos para calcular la altura
@@ -111,17 +111,9 @@ def features(ph,pp,pv,folder):
                                            'lstint_10',]
                                )
 
+    name= os.path.join(path_save,( str(datetime.datetime.now())+"_features_ph_"+ str(ph)+"pv_"+str(pv)+"_pp_"+str(pp)+".csv"))
+    df_features.to_csv(name)
     return df_features
-    #name= os.path.join(path_save,("features_ph_"+ str(ph)+"pv_"+str(pv)+"_pp_"+str(pp)+".csv"))
-    #df_features.to_csv(name)
-
-
-
-path_dataset= "/Users/juanmanuel/Documents/datasets/Lidar_3D/dataset_join/*"
-
-
-a=features(10,30,20,path_dataset)
-
 
 
 
